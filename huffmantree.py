@@ -12,17 +12,17 @@ class HuffmanTree(object):
             self.childnum = None
     
     def build_tree(self, word_list):
-        if len(word_list)==1:
+        if len(word_list) == 1:
             return word_list
         
         word_list.sort(key=lambda x:x.value)
         
-        new_node = HuffmanTree.node(None,word_list[0].value+word_list[1].value,word_list[0],word_list[1])
+        new_node = HuffmanTree.node(None, word_list[0].value + word_list[1].value, word_list[0], word_list[1])
         word_list[0].parent = new_node
         word_list[0].childnum = 0
         word_list[1].parent = new_node
         word_list[1].childnum = 1
-        del word_list[0],word_list[0]
+        del word_list[0], word_list[0]
         word_list.append(new_node)
         return self.build_tree(word_list)
         
@@ -53,12 +53,12 @@ class HuffmanTree(object):
         self.curloc = self.root
         
     def __init__(self,word_table):
-        word_list=list()
-        self.encoding_dict=dict()
+        word_list = list()
+        self.encoding_dict = dict()
         for k,v in word_table.iteritems():
             new_node = HuffmanTree.node(k,v)
             word_list.append(new_node)
-            self.encoding_dict[k]=new_node
+            self.encoding_dict[k] = new_node
         self.root = self.build_tree(word_list)[0]
         self.curloc = self.root
         
