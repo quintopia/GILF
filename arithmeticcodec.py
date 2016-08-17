@@ -1,10 +1,9 @@
 import blackjack
-import gzip
-import cStringIO
 import bitqueue
 from fractions import *
 import math
 import dawg
+from collections import defaultdict as ddict
 
 
 class ArithmeticCodec(Object):
@@ -37,15 +36,34 @@ class ArithmeticCodec(Object):
             word = prefices[-1]
         return word,s[len(word):]
     
-    def __init__(self,dictionary,upper):
+    def __init__(self,dictionary):
         """
-        dictionary maps symbols to ranges (tuples)
-        upper is the total of all frequencies in the dictionary
+        dictionary maps symbols to frequencies
         """
-        self._encodemap = dictionary
+        # We need to build a complete model, including capitals, because the stats don't have that.
+        # (Should I include ALL CAPS versions of some words? All words?)
+        cumsum = 0
+        _encodemap = ddict(int)
+        for word,freq in dictionary.items():
+	    # that lowercase is 100 times more common for most words is pure speculation.
+	    if re.search('[a-zA-Z]', word):
+		if word=="i" or word.startswith("i'"):
+		    _encodemap[word] = (cumsum,cumsum+math.ceil(freq/1000.))
+		    cumsum += math.ceil(freq/1000.)
+		    _encodemap[word.capitalize()] = (cumsum,cumsum+freq)
+		    cumsum += freq
+		else:
+		    _encodemap[word] = (cumsum,cumsum+freq)
+		    cumsum+=freq
+		    _encodemap[word.capitalize()] = (cumsum,cumsum+math.ceil(freq/100.)
+		    cumsum+=freq
+	    else:
+		_encodemap[word] = (sumsum,cumsum+freq)
+		cumsum+=freq
+        
         self._decodemap = blackjack.BJ(iterable=dictionary.items(),key=self.key_func)
         self._tokens = dawg.CompletionDAWG(dictionary.keys())
-        self._upper = upper
+        self._upper = cumsum
     
     def encode(self,string,code=BitQueue()):
         """Given a string and a bitqueue, arithmetically encode the string and push the result directly into the queue and return it
@@ -92,4 +110,16 @@ class ArithmeticCodec(Object):
             range = Fraction(bounds[1]-bounds[0],self._upper)
             location = (location-Fraction(bounds[0],self._upper))/range
         return output
-        
+if __name__=="__main__":
+    import gzip
+    import cStringIO
+    from collections import defaultdict as ddict
+    import json
+    import sys
+    
+    sys.stdout.write("Loading and compiling english model...");sys.stdout.flush()
+    with gzip.open('bwordcounts.json.gz', 'rb') as f:
+	countdict = ddict(int,json.loads(f.read()))
+    
+    ac = ArithmeticCodec(countdict)
+    
