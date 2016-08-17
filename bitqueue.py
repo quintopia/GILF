@@ -112,6 +112,14 @@ class BitQueue(object):
     
     def __len__(self):
         return (self.bitposition if self.currentbyte is not None else -1) + 1 + 8 * len(self.data) + len(self.currentinputbyte)
+        
+    def bit_iterator(self):
+        while self.hasBit():
+            yield self.nextBit()
+    
+    def byte_iterator(self):
+        while self.hasBit():
+            yield self.nextByte()
     
 
 if __name__=="__main__":

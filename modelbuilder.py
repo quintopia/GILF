@@ -1,13 +1,18 @@
-def buildModel(self,dictionary):
+from collections import defaultdict as ddict
+import re
+import math
+
+def build_model(dictionary):
     """
     dictionary maps symbols to frequencies
     """
     # We need to build a complete model, including capitals, because the stats don't have that.
     # (Should I include ALL CAPS versions of some words? All words?)
     cumsum = 0
+    #this is a list of over 300 words that are disproportionately likely to be uppercased
     toplist = ['the','an','some','who','whose','what','which','where','when','why','how','do','did',"didn't","don't",'have','had',"hadn't","haven't",
                "will","was","is","won't","wasn't","isn't","may","might","could","should","would","couldn't","wouldn't","shouldn't","were","weren't",
-               "are","aren't","am","shall","can","me","my","you","you're","your","you'll","you'd","he","his","he's","he'll","he'd","she","her","she's",
+               "are","aren't","am","shall","can","my","you","you're","your","you'll","you'd","he","his","he's","he'll","he'd","she","her","she's",
                "she'd","it","its","it's","it'll","it'd","we","we're","we'll","we'd","our","they","they're","they'll","they'd","their","this","that",
                "these","those","any","all","no","every","each","everyone","one","none","and","or","but","yet","so","for","neither","either","both",
                "if","because","unless","as","until","since","before","after","while","although","even","whereas","whenever","whether","which","now",
@@ -16,39 +21,46 @@ def buildModel(self,dictionary):
                "near","onto","into","opposite","under","over","save","through","underneath","unlike","until","upon","anything","something","everything",
                "everybody","somebody","nobody","nothing","no-one","someone","anyone","anybody","however","sometimes","soon","recently","usually","rather",
                "indeed","tonight","today","tomorrow","next","clearly","rather","basically","obviously","well","only","also","later","earlier","actually",
-               "once","perhaps","thus"]
-Indefinite pronouns, common adverbs, a few other categories
+               "once","perhaps","thus","does","doesn't","has","hasn't","can't","must","you've","she'll","we've","they've","whoever","whatever","whichever",
+               "wherever","many","few","lots","several","more","less","most","given","facing","down","up","about","concerning","far","apart","according",
+               "therefore","nevertheless","also","often","never","occasionally","immediately","maybe","possibly","probably","certainly","people","things",
+               "hopefully","seriously","honestly","hours","days","weeks","months","years","times","places","stuff","oh","uh","hi","hello","goodbye","bye",
+               "um","ah","ow","ugh","argh","eek","aha","ahem","hey","eh","right","please","thank","okay","alright","thanks","aw","two","three","four","five",
+               "six","seven","eight","nine","ten","eleven","twelve","twenty","thirty","forty","fifty","sixty","seventy","eighty","ninety","damn","shit","hell",
+               "fuck","cool","nice","neat","awesome","go","get","ask","avoid","be","bring","come","meet","send","make","take","put","keep","stay","remember",
+               "listen","look","pardon","work","hold","move","let","allow","permit","excuse","forgive","show","prove","believe","tell"]
+
     model = ddict(int)
     for word,freq in dictionary.items():
         # that lowercase is 100 times more common for most words is pure speculation.
         if re.search('[a-zA-Z]', word):
             if word.startswith("i'"):
-                model[word] = (cumsum,cumsum+math.ceil(freq/10000.))
-                cumsum += math.ceil(freq/10000.)
+                model[word] = (cumsum,cumsum+int(math.ceil(freq/10000.)))
+                cumsum += int(math.ceil(freq/10000.))
                 model[word.capitalize()] = (cumsum,cumsum+freq)
                 cumsum += freq
-                model[word+" "] = (cumsum,cumsum+math.ceil(freq/10000.))
-                cumsum += math.ceil(freq/10000.)
+                model[word+" "] = (cumsum,cumsum+int(math.ceil(freq/10000.)))
+                cumsum += int(math.ceil(freq/10000.))
                 model[word.capitalize()+" "] = (cumsum,cumsum+freq)
                 cumsum += freq
             elif word in toplist:
                 model[word] = (cumsum,cumsum+freq)
                 cumsum+=freq
-                model[word.capitalize()] = (cumsum,cumsum+math.ceil(freq/15.))
-                cumsum+=freq
+                model[word.capitalize()] = (cumsum,cumsum+int(math.ceil(freq/15.)))
+                cumsum+=int(math.ceil(freq/15.))
                 model[word+" "] = (cumsum,cumsum+freq)
                 cumsum+=freq
-                model[word.capitalize()+" "] = (cumsum,cumsum+math.ceil(freq/15.))
-                cumsum+=freq
+                model[word.capitalize()+" "] = (cumsum,cumsum+int(math.ceil(freq/15.)))
+                cumsum+=int(math.ceil(freq/15.))
             else:
                 model[word] = (cumsum,cumsum+freq)
                 cumsum+=freq
-                model[word.capitalize()] = (cumsum,cumsum+math.ceil(freq/1000.))
-                cumsum+=freq
+                model[word.capitalize()] = (cumsum,cumsum+int(math.ceil(freq/1000.)))
+                cumsum+=int(math.ceil(freq/1000.))
                 model[word+" "] = (cumsum,cumsum+freq)
                 cumsum+=freq
-                model[word.capitalize()+" "] = (cumsum,cumsum+math.ceil(freq/1000.))
-                cumsum+=freq
+                model[word.capitalize()+" "] = (cumsum,cumsum+int(math.ceil(freq/1000.)))
+                cumsum+=int(math.ceil(freq/1000.))
         else:
             model[word] = (sumsum,cumsum+freq)
             cumsum+=freq
