@@ -26,7 +26,7 @@ class BitQueue(object):
         self.currentinputbyte = ""
         
     def pushNum(self, s,l,push=1):
-        """Produce a binary string from a number. Ensure it has the specified length. Push it. Return string of pushed bits."""
+        """Produce a binary string from a number. Ensure it has at least the specified length. Push it. Return string of pushed bits."""
         s=str(s) if s<=1 and l<=1 else self.pushNum(s>>1,l-1,0) + str(s&1)
         if push: self.pushBits(s)
         return s
@@ -74,8 +74,12 @@ class BitQueue(object):
             if self.currentinputbyte:
                 output = chr(int(self.currentinputbyte + "0"*(8-len(self.currentinputbyte)),2))
                 self.currentinputbyte = ""
+                return output
             else:
                 raise Queue.Empty()
+        if self.currentbyte is None:
+            self.currentbyte = self.data[0]
+            self.data = self.data[1:]
         bitmask = (2 << self.bitposition) - 1
         bits = ord(self.currentbyte) & bitmask
         bits <<= 7 - self.bitposition
@@ -96,6 +100,9 @@ class BitQueue(object):
             else:
                 self.bitposition = 7
                 self.currentbyte = None
+        else:
+            self.currentbyte = None
+            self.bitposition = 7
             
         return chr(bits)
         
@@ -117,13 +124,59 @@ class BitQueue(object):
         while self.hasBit():
             yield self.nextBit()
     
+    def intValue(self):
+        """
+        Return value of queue as a single long integer.
+        """
+        #we could just call nextBit() until queue is empty, but this is faster
+        output = 0
+        if self.currentbyte is not None:
+            output = ord(self.currentbyte) & (2**(self.bitposition+1)-1)
+        for char in self.data:
+            output = output*2**8 + ord(char)
+        output = output*2**len(self.currentinputbyte) + int("0"+self.currentinputbyte,2)
+        return output
+        
+    def bitString(self):
+        """
+        return a string of bits representing the queue contents
+        """
+        output=""
+        if self.currentbyte is not None:
+            output += ("{0:0%db}"%(self.bitposition+1)).format(ord(self.currentbyte) & (2**(self.bitposition+1)-1))
+        for char in self.data:
+            output += "{0:08b}".format(ord(char))
+        output += self.currentinputbyte
+        return output
+    
+    def byteString(self):
+        """
+        return a string representing the queue contents
+        """
+        #nothing faster than nextByte() is possible here, so we make copies and restore them so this doesn't have side effects
+        #good thing all the data is strings...
+        bpcopy = self.bitposition
+        cbcopy = self.currentbyte
+        dacopy = self.data
+        cibcopy = self.currentinputbyte
+        output = reduce(lambda a,b: a+b,self.byte_iterator())
+        self.bitposition = bpcopy
+        self.currentbyte = cbcopy
+        self.data = dacopy
+        self.currentinputbyte = cibcopy
+        return output
+    
     def byte_iterator(self):
+        """
+        iterator that consumes the queue and produces bytes
+        """
         while self.hasBit():
             yield self.nextByte()
     
 
 if __name__=="__main__":
     bbq = BitQueue("test")
+    assert bbq.byteString()=="test"
     assert bbq.nextBit()==0
     assert bbq.nextBit()==1
     assert bbq.nextBit()==1
@@ -178,6 +231,8 @@ if __name__=="__main__":
     assert len(bbq)==2
     assert bbq.nextByte()=='@'
     bbq.pushNum(99,10)
+    assert bbq.intValue()==99
+    assert bbq.bitString()=="0001100011"
     assert bbq.nextBit()==0
     assert bbq.nextBit()==0
     assert bbq.nextBit()==0

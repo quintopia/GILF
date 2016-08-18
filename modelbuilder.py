@@ -30,39 +30,44 @@ def build_model(dictionary):
                "fuck","cool","nice","neat","awesome","go","get","ask","avoid","be","bring","come","meet","send","make","take","put","keep","stay","remember",
                "listen","look","pardon","work","hold","move","let","allow","permit","excuse","forgive","show","prove","believe","tell"]
 
-    model = ddict(int)
+    words = list()
+    breakpoints = list()
+    model = ddict(tuple)
     for word,freq in dictionary.items():
-        # that lowercase is 100 times more common for most words is pure speculation.
+        # relative frequencies of lowercase and uppercase versions are pure speculation. this model could surely benefit from more data analysis but that takes effort
         if re.search('[a-zA-Z]', word):
             if word.startswith("i'"):
-                model[word] = (cumsum,cumsum+int(math.ceil(freq/10000.)))
-                cumsum += int(math.ceil(freq/10000.))
-                model[word.capitalize()] = (cumsum,cumsum+freq)
-                cumsum += freq
-                model[word+" "] = (cumsum,cumsum+int(math.ceil(freq/10000.)))
-                cumsum += int(math.ceil(freq/10000.))
-                model[word.capitalize()+" "] = (cumsum,cumsum+freq)
-                cumsum += freq
+                width1 = int(math.ceil(freq/10000.))
+                width2 = freq
             elif word in toplist:
-                model[word] = (cumsum,cumsum+freq)
-                cumsum+=freq
-                model[word.capitalize()] = (cumsum,cumsum+int(math.ceil(freq/15.)))
-                cumsum+=int(math.ceil(freq/15.))
-                model[word+" "] = (cumsum,cumsum+freq)
-                cumsum+=freq
-                model[word.capitalize()+" "] = (cumsum,cumsum+int(math.ceil(freq/15.)))
-                cumsum+=int(math.ceil(freq/15.))
+                width1 = freq
+                width2 = int(math.ceil(freq/15.))
             else:
-                model[word] = (cumsum,cumsum+freq)
-                cumsum+=freq
-                model[word.capitalize()] = (cumsum,cumsum+int(math.ceil(freq/1000.)))
-                cumsum+=int(math.ceil(freq/1000.))
-                model[word+" "] = (cumsum,cumsum+freq)
-                cumsum+=freq
-                model[word.capitalize()+" "] = (cumsum,cumsum+int(math.ceil(freq/1000.)))
-                cumsum+=int(math.ceil(freq/1000.))
+                width1 = freq
+                width2 = int(math.ceil(freq/1000.))
+            words.append(word)
+            breakpoints.append(cumsum)
+            model[word] = (cumsum,cumsum+width1)
+            cumsum += width1
+            words.append(word.capitalize())
+            breakpoints.append(cumsum)
+            model[word.capitalize()] = (cumsum,cumsum+width2)
+            cumsum += width2
+            words.append(word+" ")
+            breakpoints.append(cumsum)
+            model[word+" "] = (cumsum,cumsum+width1)
+            cumsum += width1
+            words.append(word.capitalize()+" ")
+            breakpoints.append(cumsum)
+            model[word.capitalize()+" "] = (cumsum,cumsum+width2)
+            cumsum += width2
         else:
-            model[word] = (sumsum,cumsum+freq)
+            words.append(word)
+            breakpoints.append(cumsum)
             cumsum+=freq
+    breakpoints.append(cumsum)
+    words.append(-1) #stop symbol
+    model[-1] = (cumsum,cumsum+int(cumsum/10.))
+    breakpoints.append(cumsum+int(cumsum/10.)) # the stop symbol is guaranteed to occur, so it takes up an eleventh of the probability space
     
-    return model,cumsum
+    return model,words,breakpoints
