@@ -66,6 +66,29 @@ class BitQueue(object):
             self.data += chr(byte)
             self.currentinputbyte = bits[0:8]
             bits = bits[8:]
+            
+    def pushBitsToFront(self, bits):
+        """For pushing bits to the front of the queue so that popping the same number of bits just pushed to front will return same bits"""
+        """bits is a string of 1 and 0 characters"""
+        """basically just pop in reverse"""
+        if self.currentbyte is not None:
+            cbn = ord(self.currentbyte)
+            for i in range(self.bitposition+1,8):
+                if not bits: return
+                cbn ^= (-int(bits[-1:]) ^ cbn) & (1 << i)
+                bits = bits[:-1]
+            self.data = chr(cbn)+self.data
+            self.currentbyte = None
+            self.bitposition = 7
+        while len(bits)>=8:
+            byte = chr(int(bits[-8:],2))
+            bits = bits[:-8]
+            self.data = byte+self.data
+        if bits:
+            self.currentbyte = chr(int(bits,2))
+            self.bitposition = len(bits)-1
+            
+                
     
     def nextByte(self):
         """Get next 8 bits as a byte, tail-padded with zeroes if queue has fewer than 8 bits"""
@@ -131,11 +154,46 @@ class BitQueue(object):
         #we could just call nextBit() until queue is empty, but this is faster
         output = 0
         if self.currentbyte is not None:
-            output = ord(self.currentbyte) & (2**(self.bitposition+1)-1)
+            output = ord(self.currentbyte) & ((1<<self.bitposition)-1)
         for char in self.data:
             output = output*2**8 + ord(char)
         output = output*2**len(self.currentinputbyte) + int("0"+self.currentinputbyte,2)
         return output
+    
+    def popBits(self, numBits):
+        """
+        dequeue the next numBits bits as an int
+        """
+        if len(self)<numBits:
+            raise ValueError("Requested more bits than queue contains.")
+        output = 0
+        if self.currentbyte is not None:
+            output = ord(self.currentbyte) & ((1<<min(self.bitposition,numBits)+1)-1)
+            newnumbits = max(0,numBits-self.bitposition-1)
+            self.bitposition = max(-1,self.bitposition - numBits)
+            numBits = newnumbits
+        while numBits > 8 and len(self.data)>0:
+            output = output*2**8 + ord(self.data[0])
+            self.data = self.data[1:]
+            numBits-=8
+        if numBits > 0 and len(self.data):
+            self.currentbyte = self.data[0]
+            self.data = self.data[1:]
+            self.bitposition = 7-numBits
+            output = 2**numBits*output+(ord(self.currentbyte)>>8-numBits)
+            numBits = 0
+        while numBits>0:
+            output = 2*output+int(self.currentinputbyte[0])
+            self.currentinputbyte = self.currentinputbyte[1:]
+        if self.bitposition < 0:
+            self.bitposition = 7
+            if len(self.data)>0:
+                self.currentbyte = self.data[0]
+                self.data = self.data[1:]
+            else:
+                self.currentbyte = None
+        return output
+            
         
     def bitString(self):
         """
@@ -175,6 +233,7 @@ class BitQueue(object):
     
 
 if __name__=="__main__":
+    import pdb
     bbq = BitQueue("test")
     assert bbq.byteString()=="test"
     assert bbq.nextBit()==0
@@ -218,6 +277,11 @@ if __name__=="__main__":
         assert False
     except Queue.Empty:
         assert len(bbq)==0
+    bbq.pushBitsToFront("10101011010101001010100110001100111010110001111100001010110100101010101101010100101010011000110011101011000111110000101011010010")
+    assert len(bbq)==128
+    assert bbq.popBits(64)==12345678901234567890
+    assert bbq.popBits(64)==12345678901234567890
+    assert len(bbq)==0
     bbq.pushBytes("qu")
     assert len(bbq)==16
     assert bbq.nextBit()==0

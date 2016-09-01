@@ -1,73 +1,37 @@
-from collections import defaultdict as ddict
-import re
-import math
+import string
 
-def build_model(dictionary):
+def build_model(dictionary,symbols):
     """
-    dictionary maps symbols to frequencies
+    dictionary (succesordict) maps words to cumulative frequencies
+    symbols maps base64 encoded symbols to relative frequencies
     """
-    # We need to build a complete model, including capitals, because the stats don't have that.
-    # (Should I include ALL CAPS versions of some words? All words?)
-    cumsum = 0
-    #this is a list of over 300 words that are disproportionately likely to be uppercased
-    toplist = ['the','an','some','who','whose','what','which','where','when','why','how','do','did',"didn't","don't",'have','had',"hadn't","haven't",
-               "will","was","is","won't","wasn't","isn't","may","might","could","should","would","couldn't","wouldn't","shouldn't","were","weren't",
-               "are","aren't","am","shall","can","my","you","you're","your","you'll","you'd","he","his","he's","he'll","he'd","she","her","she's",
-               "she'd","it","its","it's","it'll","it'd","we","we're","we'll","we'd","our","they","they're","they'll","they'd","their","this","that",
-               "these","those","any","all","no","every","each","everyone","one","none","and","or","but","yet","so","for","neither","either","both",
-               "if","because","unless","as","until","since","before","after","while","although","even","whereas","whenever","whether","which","now",
-               "then","there","here","in","on","by","around","to","from","at","though","as","while","henceforth","thenceforth","above","below","among",
-               "beneath","beside","besides","between","beyond","considering","despite","during","except","following","inside","outside","into","like",
-               "near","onto","into","opposite","under","over","save","through","underneath","unlike","until","upon","anything","something","everything",
-               "everybody","somebody","nobody","nothing","no-one","someone","anyone","anybody","however","sometimes","soon","recently","usually","rather",
-               "indeed","tonight","today","tomorrow","next","clearly","rather","basically","obviously","well","only","also","later","earlier","actually",
-               "once","perhaps","thus","does","doesn't","has","hasn't","can't","must","you've","she'll","we've","they've","whoever","whatever","whichever",
-               "wherever","many","few","lots","several","more","less","most","given","facing","down","up","about","concerning","far","apart","according",
-               "therefore","nevertheless","also","often","never","occasionally","immediately","maybe","possibly","probably","certainly","people","things",
-               "hopefully","seriously","honestly","hours","days","weeks","months","years","times","places","stuff","oh","uh","hi","hello","goodbye","bye",
-               "um","ah","ow","ugh","argh","eek","aha","ahem","hey","eh","right","please","thank","okay","alright","thanks","aw","two","three","four","five",
-               "six","seven","eight","nine","ten","eleven","twelve","twenty","thirty","forty","fifty","sixty","seventy","eighty","ninety","damn","shit","hell",
-               "fuck","cool","nice","neat","awesome","go","get","ask","avoid","be","bring","come","meet","send","make","take","put","keep","stay","remember",
-               "listen","look","pardon","work","hold","move","let","allow","permit","excuse","forgive","show","prove","believe","tell"]
+    # All this is supposed to do is make sure all printable ascii chars get into the english model, just in case.
+    # So we need to add the (decoded) symbols from symbols to dictionary with frequencies given by their relative frequencies and the total size of the model
+    # we need to do this every time since some symbols are bytes and may not appear directly in json files, so we keep these base64 encoded in a separate file. we don't want them in the regular word file because then we either have to base64 encode the whole thing (huge file) or have to parse
+    # it all to find the encoded ones (slow)
+    # why not just pickle instead of json? I want people to be able to host an interpreter and trust that it's not malicious without having to pick apart the pickled file.
+    # TODO: eventually maybe all "reasonable" bytes can be put in this file
 
-    words = list()
-    breakpoints = list()
-    model = ddict(tuple)
-    for word,freq in dictionary.items():
-        # relative frequencies of lowercase and uppercase versions are pure speculation. this model could surely benefit from more data analysis but that takes effort
-        if re.search('[a-zA-Z]', word):
-            if word.startswith("i'"):
-                width1 = int(math.ceil(freq/10000.))
-                width2 = freq
-            elif word in toplist:
-                width1 = freq
-                width2 = int(math.ceil(freq/15.))
-            else:
-                width1 = freq
-                width2 = int(math.ceil(freq/1000.))
-            words.append(word)
-            breakpoints.append(cumsum)
-            model[word] = (cumsum,cumsum+width1)
-            cumsum += width1
-            words.append(word.capitalize())
-            breakpoints.append(cumsum)
-            model[word.capitalize()] = (cumsum,cumsum+width2)
-            cumsum += width2
-            words.append(word+" ")
-            breakpoints.append(cumsum)
-            model[word+" "] = (cumsum,cumsum+width1)
-            cumsum += width1
-            words.append(word.capitalize()+" ")
-            breakpoints.append(cumsum)
-            model[word.capitalize()+" "] = (cumsum,cumsum+width2)
-            cumsum += width2
-        else:
-            words.append(word)
-            breakpoints.append(cumsum)
-            cumsum+=freq
-    breakpoints.append(cumsum)
-    words.append(-1) #stop symbol
-    model[-1] = (cumsum,cumsum+int(cumsum/10.))
-    breakpoints.append(cumsum+int(cumsum/10.)) # the stop symbol is guaranteed to occur, so it takes up an eleventh of the probability space
     
-    return model,words,breakpoints
+    #what's the minimum relfreq?
+    minrelfreq = min(symbols.values())
+    symbols = {k.decode('base64'):v for k,v in symbols.items()}
+    cumsum = dictionary[dictionary.last_key()]
+    for symbol in string.printable:
+        try:
+            dictionary[symbol]
+        except KeyError:
+            try:
+                symbols[symbol]
+            except KeyError:
+                symbols[symbol] = minrelfreq
+                
+    ocumsum = cumsum
+    for symbol,relfreq in symbols.items():
+        cumsum += int(relfreq/(1-relfreq)*ocumsum)
+        dictionary[symbol]=cumsum
+    #now that the model is complete, we must add a stop symbol
+    
+    dictionary[-1] = cumsum+int(cumsum/10.)
+    
+    return dictionary
