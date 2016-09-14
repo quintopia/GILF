@@ -11,6 +11,7 @@ class SuccessorDict(OrderedDict):
         prev = self._OrderedDict__map[key][0]
         if prev is self._OrderedDict__root:
             raise ValueError("{!r} is the first key".format(key))
+        return prev[2]
     def first_key(self):
         for key in self: return key
         raise ValueError("SuccessorDict is empty.")

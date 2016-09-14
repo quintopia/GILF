@@ -6,20 +6,14 @@ import copy
 import dawg
 from operator import mul
 import time
-
-def memoize(f):
-    """ Memoization decorator for a function taking a single argument """
-    class memodict(dict):
-        def __missing__(self, key):
-            ret = self[key] = f(key)
-            return ret 
-    return memodict().__getitem__
+import progressbar
+from repoze.lru import lru_cache
     
 with gzip.open('engmodel1.json.gz', 'rb') as f:
     countdict = json.load(f,object_pairs_hook=sdict)
 ddawg = dawg.CompletionDAWG(countdict.keys())
 
-@memoize
+@lru_cache(30000)
 def tokenize(word):
     #print word
     prefices = ddawg.prefixes(word)
@@ -38,8 +32,8 @@ def tokenize(word):
 total = sum(countdict.values())
 print total
 wtd = {}
-
-sys.stdout.write("Words loaded. Processing");sys.stdout.flush()
+length = len(countdict)
+print "Words loaded. Processing..."
 for i,word in enumerate(countdict.keys()):
     currelfreq = float(countdict[word])/total
     maxsofar = currelfreq
@@ -52,12 +46,16 @@ for i,word in enumerate(countdict.keys()):
                 maxsofar = score
                 bestsplit = tokenization
     if maxsofar > currelfreq:
-        sys.stdout.write("\nGoing to delete "+word);sys.stdout.flush()
         wtd[word] = bestsplit
+        for token in bestsplit:
+            if token in wtd.keys():
+                del wtd[token]
+        #sys.stdout.write("\nGoing to delete "+word);sys.stdout.flush()
+        
     if not i%500:
-        sys.stdout.write(".");sys.stdout.flush()
+        progressbar.printProgress(i,length)
 print "done!"
-sys.stdout.write("Deleting uncommons");sys.stdout.flush()
+sys.stdout.write("Deleting uncommons...");sys.stdout.flush()
 for word,split in wtd.items():
     val = countdict[word]
     del countdict[word]

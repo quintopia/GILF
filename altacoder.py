@@ -4,17 +4,47 @@ import bitqueue
 import math
 import dawg
 import sys
-	
+import re
+import operator
+from successordict import SuccessorDict as sdict
+from repoze.lru import lru_cache
+import progressbar
+
 class ArithmeticCodec:
     # Thanks to nayuki and contributors at Github for making it clearer how the binary approximation works, and a few lines of code here and there
-    
+    @lru_cache(30000)
+    def tokenize(self, word):
+        """Find all possible ways to tokenize the word, and return the highest scoring"""
+        prefices = self._tokens.prefixes(word)
+        best_score = 0
+        for prefix in prefices:
+            ub = self._encodemap[prefix]
+            try:
+                lb = self._encodemap[self._encodemap.prev_key(prefix)]
+            except ValueError:
+                lb = 0
+            prefix_score = (ub-lb)/float(self._upper)
+            suffix = word[len(prefix):]
+            if suffix:
+                suffixsplit,splitscore = self.tokenize(suffix)
+            else:
+                suffixsplit,splitscore = [],1
+            if prefix_score*splitscore > best_score:
+                best_split = [prefix]+suffixsplit
+                best_score = prefix_score*splitscore
+        return best_split,best_score
+        
     def split_first_token(self,s):
-        """Find the longest possible token at the beginning of the string and split the string on it"""
+        """Find the optimal token at the beginning of the string and split the string on it"""
         # thanks to Mikhail Korobov and contributors for DAWG. much easier to make this project faster with it.
         word = ""
-        prefices = self._tokens.prefixes(s)
-        if prefices:
-            word = prefices[-1]
+        #all words in model are short, so no need to optimize over more than the first 50 chars (even this is overkill)
+        if not s:
+            return "",""
+        cut = self._split_re.split(s[:50],1)
+        cut = cut[0] if cut[0] else cut[1]
+        word=self.tokenize(cut)[0][0]
+        #we return the first token of the split, but thanks to the magic of memoization, if there was more than one token in it, we've got the rest "buffered"
         return word,s[len(word):]
     
     def __init__(self,model):
@@ -28,6 +58,7 @@ class ArithmeticCodec:
         self._tokens = dawg.CompletionDAWG(model.keys()[:-1])
         self._upper = model[model.last_key()]
         self._size = self._upper.bit_length()+2
+        self._split_re = re.compile("([^a-zA-Z0-9'])")
     
     def encode(self,string,code=bitqueue.BitQueue()):
         """Given a string and a bitqueue, arithmetically encode the string and push the result directly into the queue and return it
@@ -38,6 +69,7 @@ class ArithmeticCodec:
         upper = MASK
         underflow = 0
         # loop through symbols and do arithmetic coding
+        total = len(string)
         w,string = self.split_first_token(string)
         while w:
             ub = self._encodemap[w]
@@ -68,6 +100,7 @@ class ArithmeticCodec:
                 lower = lower<<1 & MASK>>1
                 upper = upper<<1 & MASK>>1 | TOP_MASK | 1
             w,string = self.split_first_token(string)
+            #progressbar.printProgress(total-len(string),total)
             #print "{0:041b}".format(lower),"{0:041b}".format(upper)
             #print "next!"
         #now push a stop symbol
@@ -308,12 +341,6 @@ Never gonna tell a lie and hurt you"""
         countdict = json.load(f,object_pairs_hook=sdict)
     with gzip.open('engmodel2.json.gz','rb') as f:
         teststring = " ".join(json.load(f).keys()[:10000])
-    #teststring = " ".join(countdict.keys()[:10000])
-    #base length on 10000 words: 379267 bits
-    #shortened dictionary length on 10k words: 338011 bits
-    #compressed shortened dictionary length on 10k words: 329736
-    #optimal tokenized compressed shortened dictionary on 10k words: 324362
-    #optimal tokenizer length on all words: 18055339
     with open("symbols.json") as f:
         symbols = json.load(f)
     fullmodel = modelbuilder.build_model(countdict,symbols)

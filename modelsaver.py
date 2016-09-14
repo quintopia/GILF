@@ -6,7 +6,7 @@ import gzip
 import json
 
 sys.stdout.write("Reading in words...");sys.stdout.flush()
-with gzip.open('engmodel1.json.gz', 'rb') as f:
+with gzip.open('engmodel5.json.gz', 'rb') as f:
     dictionary = json.loads(f.read(),object_pairs_hook=sdict)
 print "done!"
 # We need to build a complete model, including capitals, because the stats don't have that.
@@ -87,6 +87,6 @@ for key,val in sorted(dictionary.items()):
     intermodel[key] = cumsum
 print "done!"
 sys.stdout.write("Saving new model...");sys.stdout.flush()
-with gzip.open('engmodel2.json.gz', 'wb') as f:
+with gzip.open('engmodel6.json.gz', 'wb') as f:
     f.write(json.dumps(intermodel, f, separators=(',',':')))
 print "done!"

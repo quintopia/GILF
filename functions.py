@@ -1,4 +1,12 @@
-def memoize(f):
+def memoize1(f):
+    """ Memoization decorator for a function taking a single argument (faster than memoize2)"""
+    class memodict(dict):
+        def __missing__(self, key):
+            ret = self[key] = f(key)
+            return ret 
+    return memodict().__getitem__
+
+def memoize2(f):
     """ Memoization decorator for functions taking one or more arguments. """
     class memodict(dict):
         def __init__(self, f):
@@ -32,7 +40,7 @@ class UnaryFunction(object):
     def __init__(self, codeword, function, argument):
     """ argument is not a value. it is a reference to another callable.
         As you would expect from a functional language.... """
-        self.function = memoize(function)
+        self.function = memoize1(function)
         self.argument = argument
         self.codeword = codeword
         self.length = len(argument)+1
@@ -46,7 +54,7 @@ class UnaryFunction(object):
 class BinaryFunction(object):
 """ Binary functions take two inputs. Memoizing."""
     def __init__(self, codeword, function, left_argument, right_argument):
-        self.function = memoize(function)
+        self.function = memoize2(function)
         self.left_argument = left_argument
         self.right_argument = right_argument
         self.codeword = codeword
