@@ -46,3 +46,5 @@ Network Trash Folder
 Temporary Items
 .apdisk
 *.pyc
+bwordcounts.json.gz
+cwordcounts.json.gz
