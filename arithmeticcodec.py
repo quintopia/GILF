@@ -10,17 +10,22 @@ from repoze.lru import lru_cache
 
 class ArithmeticCodec:
     # Thanks to nayuki and contributors at Github for making it clearer how the binary approximation works, and a few lines of code here and there
+    def get_bounds(self,w):
+        """Find the lower and upper bounds of the word in the dictionary"""
+        ub = self._encodemap[w]
+        try:
+            lb = self._encodemap[self._encodemap.prev_key(w)]
+        except ValueError:
+            lb = 0
+        return lb,ub
+        
     @lru_cache(30000)
     def tokenize(self, word):
         """Find all possible ways to tokenize the word, and return the highest scoring"""
         prefices = self._tokens.prefixes(word)
         best_score = 0
         for prefix in prefices:
-            ub = self._encodemap[prefix]
-            try:
-                lb = self._encodemap[self._encodemap.prev_key(prefix)]
-            except ValueError:
-                lb = 0
+            lb,ub = self.get_bounds(prefix)
             prefix_score = (ub-lb)/float(self._upper)
             suffix = word[len(prefix):]
             if suffix:
@@ -40,8 +45,20 @@ class ArithmeticCodec:
         if not s:
             return "",""
         cut = self._split_re.split(s[:50],1)
+        if len(cut)>=3 and s.isupper():
+            return u"WHOLESTRINGCAPS",s.lower()
         cut = cut[0] if cut[0] else cut[1]
-        word=self.tokenize(cut)[0][0]
+        word,score=self.tokenize(cut)
+        word = word[0]
+        if len(cut)>1 and len(word)==1 and word[0].isupper() and cut[0].lower()+cut[1:] in filter(lambda x: isinstance(x,unicode),self._encodemap.keys()):
+            return u"CAPITALIZED",word.lower()+s[1:] #capitalized word not capitalized in dict -> capitalization token and lowercased word in string
+        if len(word)==1 and len(cut)>1 and cut.isupper():
+            lb,ub = self.get_bounds("ALLCAPS")
+            word2,score2 = self.tokenize(cut.lower())
+            altscore = (ub-lb)/float(self._upper)*score2
+
+            if len(word2[0])>1 and altscore > score:
+                return u"ALLCAPS",s[:len(word2[0])].lower()+s[len(word2[0]):] #all caps word -> all caps token and lowercased word in string
         #we return the first token of the split, but thanks to the magic of memoization, if there was more than one token in it, we've got the rest "buffered"
         return word,s[len(word):]
     
@@ -70,12 +87,7 @@ class ArithmeticCodec:
         total = len(string)
         w,string = self.split_first_token(string)
         while w:
-            ub = self._encodemap[w]
-            try:
-                lb = self._encodemap[self._encodemap.prev_key(w)]
-            except ValueError:
-                lb = 0
-            #print lb,ub
+            lb,ub = self.get_bounds(w)
             rrange = upper-lower+1
             upper = lower + (rrange * ub // self._upper)-1
             lower = lower + (rrange * lb // self._upper)
@@ -152,7 +164,9 @@ class ArithmeticCodec:
         #print "{0:0b}".format(TOP_MASK)
         #print ("{0:0%db}"%(self._size+1)).format(location)
         extrazeroes=0
-
+        capitalizenext=0
+        allcapsnext=0
+        nothinbutcaps=0
         while symbol!=-1 and (bq.hasBit() or location):
             #scale location from code range to frequency table range
             #print lower,upper
@@ -174,7 +188,17 @@ class ArithmeticCodec:
             assert lb<=value<ub
             #print lb,ub
             #import pdb;pdb.set_trace()
-            if symbol!=-1: output+=symbol
+            if symbol==u"CAPITALIZED": capitalizenext=1
+            elif symbol==u"ALLCAPS": allcapsnext=1
+            elif symbol==u"WHOLESTRINGCAPS": nothinbutcaps=1
+            elif symbol!=-1: 
+                if capitalizenext:
+                    output+=symbol.capitalize()
+                    capitalizenext=0
+                elif allcapsnext or nothinbutcaps:
+                    output+=symbol.upper()
+                    allcapsnext=0
+                else: output+=symbol
             
             #update bounds to remove effect of removed symbol
             upper = lower + (rrange * ub // self._upper)-1
@@ -333,12 +357,13 @@ Never gonna give you up, never gonna let you down
 Never gonna run around and desert you
 Never gonna make you cry, never gonna say goodbye
 Never gonna tell a lie and hurt you"""
+    teststring = u"THIS IS A TEST OF ALL CAPS COMPRESSION."
     sys.stdout.write("Loading and compiling english model...");sys.stdout.flush()
     starttime = time.time()
     with gzip.open('engmodel6.json.gz', 'rb') as f:
         countdict = json.load(f,object_pairs_hook=sdict)
-    with gzip.open('engmodel2.json.gz','rb') as f:
-        teststring = " ".join(json.load(f).keys()[:10000])
+    #with gzip.open('engmodel2.json.gz','rb') as f:
+    #    teststring = " ".join(json.load(f).keys()[:10000])
     with open("symbols.json") as f:
         symbols = json.load(f)
     fullmodel = modelbuilder.build_model(countdict,symbols)

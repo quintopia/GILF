@@ -13,10 +13,10 @@ print "done!"
 # (Should I include ALL CAPS versions of some words? All words?)
 #this is a list of over 300 words that are disproportionately likely to be uppercased
 cumsum = 0
-toplist = ['the','an','some','who','whose','what','which','where','when','why','how','do','did',"didn't","don't",'have','had',"hadn't","haven't",
-           "will","was","is","won't","wasn't","isn't","may","might","could","should","would","couldn't","wouldn't","shouldn't","were","weren't",
-           "are","aren't","am","shall","can","my","you","you're","your","you'll","you'd","he","his","he's","he'll","he'd","she","her","she's",
-           "she'd","it","its","it's","it'll","it'd","we","we're","we'll","we'd","our","they","they're","they'll","they'd","their","this","that",
+toplist = ['the','an','some','who','whose','what','which','where','when','why','how','do','did','have','had',
+           "will","was","is","may","might","could","should","would","were",
+           "are","am","shall","can","my","you","your","he","his","she","her",
+           "it","its","we","our","they","their","this","that",
            "these","those","any","all","no","every","each","everyone","one","none","and","or","but","yet","so","for","neither","either","both",
            "if","because","unless","as","until","since","before","after","while","although","even","whereas","whenever","whether","which","now",
            "then","there","here","in","on","by","around","to","from","at","though","as","while","henceforth","thenceforth","above","below","among",
@@ -33,6 +33,7 @@ toplist = ['the','an','some','who','whose','what','which','where','when','why','
            "fuck","cool","nice","neat","awesome","go","get","ask","avoid","be","bring","come","meet","send","make","take","put","keep","stay","remember",
            "listen","look","pardon","work","hold","move","let","allow","permit","excuse","forgive","show","prove","believe","tell"]
 sys.stdout.write("Adding new entries...");sys.stdout.flush()
+noncapcount = 0
 for word,freq in dictionary.items():
     # relative frequencies of lowercase and uppercase versions are pure speculation. this model could surely benefit from more data analysis but that takes effort
     if word[0].isalpha():
@@ -44,13 +45,22 @@ for word,freq in dictionary.items():
             width2 = int(math.ceil(freq/15.))
         else:
             width1 = int(math.floor(999./1000*freq))
-            width2 = int(math.ceil(freq/1000.))
+            width2 = 0
+            noncapcount += freq
         dictionary[word] = width1
-        dictionary[word.capitalize()] = width2
+        if width2:
+            dictionary[word.capitalize()] = width2
         cumsum+=width1+width2
     else:
 	cumsum += freq
 	dictionary[word]=freq
+
+dictionary[u"CAPITALIZED"] = noncapcount/900 #capitalized words (not most common)
+cumsum += noncapcount/900
+dictionary[u"ALLCAPS"] = noncapcount/10000 #all caps words
+cumsum += noncapcount/10000
+dictionary[u"WHOLESTRINGCAPS"] = noncapcount/100000
+cumsum += noncapcount/100000
 
 i = dictionary["I"]
 you = dictionary["you"]
@@ -66,17 +76,39 @@ d = int(.051335*(i+you+they+we+he+she+it))
 ll = int(.029696*(i+you+they+we+he+she+it))
 
 cumsum+=ll+ve+d+ere
-dictionary["'ll"] = ll
-dictionary["'ve"] = ve
-dictionary["'d"] = d
-dictionary["'re"] = ere
+dictionary[u"'ll"] = ll
+dictionary[u"'ve"] = ve
+dictionary[u"'d"] = d
+dictionary[u"'re"] = ere
+
+do = dictionary["do"]
+does = dictionary["does"]
+did = dictionary["did"]
+had = dictionary["had"]
+have = dictionary["have"]
+could = dictionary["could"]
+iz = dictionary["is"]
+was = dictionary["was"]
+would = dictionary["would"]
+were = dictionary["were"]
+should = dictionary["should"]
+are = dictionary["are"]
+
+nt = do+does+did+had/20+have/30+were/15+are/20+was/15+iz/100+would/5+should/7+could/4
+dictionary[u"n't"] = nt
+cumsum+=nt
+
+dictionary[u"can't"] = dictionary["can"]/3
+cumsum += dictionary["can't"]
+dictionary[u"won't"] = dictionary["will"]/3
+cumsum += dictionary["won't"]
 
 #these coefficients take into account the target cumsum in each case, so we can update cumsum immediately
 s = int(.0075513*cumsum)
-dictionary["'s"] = s
+dictionary[u"'s"] = s
 cumsum += s
 imm = int(.00118478 * cumsum)
-dictionary["I'm"] = imm
+dictionary[u"I'm"] = imm
 print "done!"
 
 sys.stdout.write("Sorting keys and accumulating values...");sys.stdout.flush()
