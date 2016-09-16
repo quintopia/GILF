@@ -19,6 +19,10 @@ class BitQueue(object):
     "a"
     """
     
+    def append(self,bq):
+        """Append all of the bits in the argument to this queue (without modifying the argument)."""
+        self.pushBits(bq.bitString())
+    
     def __init__(self,data=""):
         self.data = data
         self.currentbyte = None
