@@ -25,10 +25,9 @@ class BitQueue(object):
         self.bitposition = 7
         self.currentinputbyte = ""
         
-    def pushNum(self, s,l,push=1):
+    def pushNum(self, s,l):
         """Produce a binary string from a number. Ensure it has at least the specified length. Push it. Return string of pushed bits."""
-        s=str(s) if s<=1 and l<=1 else self.pushNum(s>>1,l-1,0) + str(s&1)
-        if push: self.pushBits(s)
+        self.pushBits(("{:0%db}"%l).format(s))
         return s
     
     def nextBit(self):
@@ -168,7 +167,7 @@ class BitQueue(object):
             raise ValueError("Requested more bits than queue contains.")
         output = 0
         if self.currentbyte is not None:
-            output = ord(self.currentbyte) & ((1<<min(self.bitposition,numBits)+1)-1)
+            output = (ord(self.currentbyte) & (((1<<self.bitposition+1)-1) ^ (1<<max(self.bitposition-numBits+1,0))-1))>>max(self.bitposition-numBits+1,0)
             newnumbits = max(0,numBits-self.bitposition-1)
             self.bitposition = max(-1,self.bitposition - numBits)
             numBits = newnumbits
@@ -180,11 +179,12 @@ class BitQueue(object):
             self.currentbyte = self.data[0]
             self.data = self.data[1:]
             self.bitposition = 7-numBits
-            output = 2**numBits*output+(ord(self.currentbyte)>>8-numBits)
+            output = (output<<numBits)+(ord(self.currentbyte)>>8-numBits)
             numBits = 0
         while numBits>0:
             output = 2*output+int(self.currentinputbyte[0])
             self.currentinputbyte = self.currentinputbyte[1:]
+            numBits-=1
         if self.bitposition < 0:
             self.bitposition = 7
             if len(self.data)>0:
