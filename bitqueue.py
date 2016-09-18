@@ -31,6 +31,8 @@ class BitQueue(object):
         
     def pushNum(self, s,l):
         """Produce a binary string from a number. Ensure it has at least the specified length. Push it. Return string of pushed bits."""
+        if s<0:
+            raise ValueError("Can't push a negative number to bitqueue.")
         self.pushBits(("{:0%db}"%l).format(s))
         return s
     
@@ -198,6 +200,14 @@ class BitQueue(object):
                 self.currentbyte = None
         return output
             
+    def popBytes(self,n):
+        "Pop the next n bytes and return as string"
+        if len(self)<8*n:
+            raise ValueError("Requested more bytes than queue contains.")
+        s=""
+        for i in range(n):
+            s+=self.nextByte()
+        return s
         
     def bitString(self):
         """
