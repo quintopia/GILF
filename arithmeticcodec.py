@@ -230,7 +230,6 @@ class ArithmeticCodec:
 
 if __name__=="__main__":
     import gzip
-    import cStringIO
     from successordict import SuccessorDict as sdict
     import json
     import sys
