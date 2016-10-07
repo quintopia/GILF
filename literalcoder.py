@@ -8,9 +8,17 @@ import gzip
 from successordict import SuccessorDict as sdict
 import json
 import modelbuilder
-import functions
 import struct
+import encoder
 ac = None
+
+class GILFprogram:
+    def __init__(self,rootnode):
+        self.root = rootnode
+        
+    def run(self):
+        self.root()
+        
 def prepare():
     global ac
     with gzip.open('engmodel6.json.gz', 'rb') as f:
@@ -27,8 +35,12 @@ def encode(data, bq=bitqueue.BitQueue()):
         bq.pushBits("10")
         return numcoder.encode(data,bq)
     elif isinstance(data, float):
-        bq.pushBits("11")
-        return bq.pushBytes(struct.pack('!f',data))
+        bq.pushBits("110")
+        bq.pushBytes(struct.pack('!f',data))
+        return bq
+#    elif type(data) is GILFprogram: 
+#        bq.pushBits("111")
+#        return encoder.encode(data)
     raise ValueError("Literals of type %s are not supported"%data.__class__.__name__)
 
 def encode_str(s, bq=bitqueue.BitQueue()):
@@ -64,7 +76,9 @@ def decode(bq):
         return decode_str(bq)
     if not bq.nextBit():
         return numcoder.decode(bq)
-    return struct.unpack('!f',bq.popBytes(4))[0]
+    if not bq.nextBit():
+        return struct.unpack('!f',bq.popBytes(4))[0]
+    return GILFprogram(encoder.decode(bq))
 
 def decode_str(bq):
     global ac

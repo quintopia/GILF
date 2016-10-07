@@ -10,6 +10,9 @@ class NullaryFunction(object):
         self.hasParent = hasParent
         self.codeword = codeword
     
+    def set_value(self,value):
+        self.data = value
+    
     def __call__(self):
         return self.data
     
