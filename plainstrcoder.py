@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 import bitqueue
 
-def encode(s,bq=bitqueue.BitQueue()):
+def encode(s,bq=None):
+    if bq is None: bq = bitqueue.BitQueue()
     if "\x00" in s:
         raise ValueError("String contains a null byte.")
     bq.pushBytes(s.encode('utf8')+"\x00")

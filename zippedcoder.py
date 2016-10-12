@@ -2,7 +2,8 @@
 import bitqueue
 import bz2
 
-def encode(s,bq=bitqueue.BitQueue()):
+def encode(s,bq=None):
+    if bq is None: bq=bitqueue.BitQueue()
     bq.pushBytes(bz2.compress(s.encode('utf8')))
     return bq
     

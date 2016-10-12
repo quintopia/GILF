@@ -75,9 +75,10 @@ class ArithmeticCodec:
         self._size = self._upper.bit_length()+2
         self._split_re = re.compile("([^a-zA-Z0-9'])")
     
-    def encode(self,string,code=bitqueue.BitQueue()):
+    def encode(self,string,code=None):
         """Given a string and a bitqueue, arithmetically encode the string and push the result directly into the queue and return it
         If no bitqueue is provided, return a fresh one containing only the encoded string."""
+        if code is None: code = bitqueue.BitQueue()
         MASK = (1<<self._size+1)-1
         TOP_MASK = 1<<self._size
         lower = 0

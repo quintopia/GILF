@@ -27,7 +27,8 @@ def prepare():
         symbols = json.load(f)
     ac = ArithmeticCodec(modelbuilder.build_model(countdict,symbols))
 
-def encode(data, bq=bitqueue.BitQueue()):
+def encode(data, bq=None):
+    if bq is None: bq=bitqueue.BitQueue()
     if isinstance(data, str) or isinstance(data, unicode):
         bq.pushBits("0")
         return encode_str(data,bq)
@@ -43,10 +44,11 @@ def encode(data, bq=bitqueue.BitQueue()):
 #        return encoder.encode(data)
     raise ValueError("Literals of type %s are not supported"%data.__class__.__name__)
 
-def encode_str(s, bq=bitqueue.BitQueue()):
+def encode_str(s, bq=None):
     global ac
     if ac is None:
         prepare()
+    if bq is None: bq=bitqueue.BitQueue()
     try:
         bq1 = packedcoder.encode(s)
         encodetype = "01"

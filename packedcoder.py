@@ -5,7 +5,8 @@ __table = [0,1,2,3,4,5,6,7,8,29,41,9,10,40,11,12,13,14,15,16,17,18,19,20,21,22,2
            117,119,95,100,101,114,107,105,106,104,115,39,38,37,36,35,34,33,32,31,30,102,103,108,118,109,97,125,67,
            66,65,64,63,62,61,60,59,58,57,56,55,54,53,52,51,50,49,48,47,46,45,44,43,42,110,116,111,122,99,126,69,70,
            71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,112,120,113,121]
-def encode(s,bq=bitqueue.BitQueue()):
+def encode(s,bq=None):
+    if bq is None: bq = bitqueue.BitQueue()
     # pack the string into the given bitqueue
     if isinstance(s,unicode):
         raise UnicodeError("Packed strings do not support unicode.")

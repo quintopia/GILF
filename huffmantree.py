@@ -1,4 +1,5 @@
-
+import bitqueue
+import Queue
 
 class HuffmanTree(object):
 
@@ -26,26 +27,28 @@ class HuffmanTree(object):
         word_list.append(new_node)
         return self.build_tree(word_list)
         
-    def encode(self,word):
+    def encode(self,word,bq=None):
+        if bq is None: bq=bitqueue.BitQueue()
         word_node = self.encoding_dict[word]
-        return self.build_symbol(word_node)
+        return self.build_symbol(word_node,bq)
     
-    def build_symbol(self,word_node):
+    def build_symbol(self,word_node,bq):
         if word_node == self.root:
-            return []
-        output_list = self.build_symbol(word_node.parent)
-        output_list.append(word_node.childnum)
-        return output_list
+            return bq
+        bq = self.build_symbol(word_node.parent,bq)
+        bq.pushBit(word_node.childnum)
+        return bq
     
-    def decode(self, bit):
-        """decode(bit) consumes bits one at a time, traversing the huffman tree.
-        If it has not found a codeword yet, it returns None.
-        As soon as it finds a code word, it returns it and resets to begin traversing for another word."""
-        self.curloc = self.curloc.children[bit]
-        output = self.curloc.word
-        if output is not None:
-            self.curloc = self.root
-        return output
+    def decode(self, bq):
+        """decode(bit) consumes exactly as many bits from the queue as needed to find a codeword"""
+        curloc = self.root
+        while curloc.word is None:
+            try:
+                bit = bq.nextBit()
+            except Queue.Empty:
+                raise ValueError("No codeword found in queue")
+            curloc = curloc.children[bit]
+        return curloc.word
     
     def reset_decode(self):
         """Call reset_decode() to reset the tree traversal when decoding,
@@ -70,23 +73,19 @@ if __name__=="__main__":
     assert h.root.children[1].children[1].children[0].word == "i"
     assert h.root.children[1].children[1].children[1].children[1].word == "n"
     assert h.root.children[1].children[1].children[1].children[0].word == "t"
-    assert h.encode("q") == [0]
-    assert h.encode("u") == [1,0]
-    assert h.encode("i") == [1,1,0]
-    assert h.encode("n") == [1,1,1,1]
-    assert h.encode("t") == [1,1,1,0]
-    assert h.decode(0) == "q"
-    assert h.decode(1) is None
-    assert h.decode(0) == "u"
-    assert h.decode(1) is None
-    assert h.decode(1) is None
-    assert h.decode(0) == "i"
-    assert h.decode(1) is None
-    assert h.decode(1) is None
-    assert h.decode(1) is None
-    assert h.decode(1) == "n"
-    assert h.decode(1) is None
-    assert h.decode(1) is None
-    assert h.decode(1) is None
-    assert h.decode(0) == "t"
+    q = h.encode("q")
+    assert q.bitString() == "0"
+    u = h.encode("u")
+    assert u.bitString() == "10"
+    i = h.encode("i")
+    assert i.bitString() == "110"
+    n = h.encode("n")
+    assert n.bitString() == "1111"
+    t = h.encode("t")
+    assert t.bitString() == "1110"
+    assert h.decode(q) == "q"
+    assert h.decode(u) == "u"
+    assert h.decode(i) == "i"
+    assert h.decode(n) == "n"
+    assert h.decode(t) == "t"
     print "Success!"

@@ -1,7 +1,8 @@
 import bitqueue
 import math
 
-def encode(n,bq=bitqueue.BitQueue()):
+def encode(n,bq=None):
+    if bq is None: bq=bitqueue.BitQueue()
     if -8<=n<=7: #4 bit tiny number
         if n<0: n+=16
         bq.pushBits("0"+"{:04b}".format(n))
