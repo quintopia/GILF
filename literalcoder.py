@@ -26,6 +26,16 @@ def prepare():
     with open("symbols.json") as f:
         symbols = json.load(f)
     ac = ArithmeticCodec(modelbuilder.build_model(countdict,symbols))
+    
+def encode_list(data, bq=None):
+    if bq is None: bq=bitqueue.BitQueue()
+    if not isinstance(data, list): return encode(data, bq)
+    for item in data[:-1]:
+        encode(item, bq)
+        bq.pushBit(1)
+    encode(data[-1],bq)
+    bq.pushBit(0)
+    return bq
 
 def encode(data, bq=None):
     if bq is None: bq=bitqueue.BitQueue()
@@ -72,6 +82,16 @@ def encode_str(s, bq=None):
     bq.pushBits(encodetype)
     bq.append(bq1)
     return bq
+
+def decode_list(bq):
+    head = list(decode(bq))
+    if bq.nextBit():
+        remainder = decode_list(bq)
+    else:
+        remainder = []
+    head.extend(remainder)
+    return head
+    
 
 def decode(bq):
     if not bq.nextBit():
